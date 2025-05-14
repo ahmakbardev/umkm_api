@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ asset('templates/assets/style.css') }}" />
     <!--? swiperjs cdn link -->
     <link rel="stylesheet" href="https://unpkg.com/swiper@8/swiper-bundle.min.css" />
-    @vite('resources/css/app.css')
+    {{-- @vite('resources/css/app.css') --}}
 
     <title>eCommerece</title>
 </head>

@@ -34,7 +34,6 @@ Route::middleware(['auth.admin'])->group(function () {
 
     Route::post('/umkms/{id}/products', [ProductController::class, 'store']);  // 🔥 API Tambah Produk
     Route::get('/umkms/{id}/products', [ProductController::class, 'getByUMKM']); // 🔥 API Get Produk by UMKM ID
-    Route::put('/products/{id}', [ProductController::class, 'update']);  // 🔥 API Edit Produk
     Route::delete('/products/{id}', [ProductController::class, 'destroy']); // 🔥 API Hapus Produk
 
     Route::post('/categories', [CategoryController::class, 'store']);   // Create new category
@@ -59,20 +58,23 @@ Route::middleware(['auth.umkm'])->group(function () {
 
     Route::put('/umkms/{id}', [UMKMController::class, 'update']); // Update UMKM
 
-    Route::post('/umkms/{id}/products', [ProductController::class, 'store']);  // 🔥 API Tambah Produk
     Route::get('/umkms/{id}/products', [ProductController::class, 'getByUMKM']); // 🔥 API Get Produk by UMKM ID
     Route::put('/products/{id}', [ProductController::class, 'update']);  // 🔥 API Edit Produk
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']); // 🔥 API Hapus Produk
 
     Route::get('/incomes', [IncomeController::class, 'index']);
-    Route::post('/incomes', [IncomeController::class, 'store']);
     Route::get('/incomes/{income}', [IncomeController::class, 'show']);
-    Route::put('/incomes/{income}', [IncomeController::class, 'update']);
     Route::delete('/incomes/{income}', [IncomeController::class, 'destroy']);
 });
+Route::delete('/products/{id}', [ProductController::class, 'destroy']); // 🔥 API Hapus Produk
+Route::post('/umkms/{id}/products', [ProductController::class, 'store']);  // 🔥 API Tambah Produk
+Route::put('/products/{id}', [ProductController::class, 'update']);  // 🔥 API Edit Produk
 
+Route::post('/forgot-password', [UmkmAuthController::class, 'sendResetPassword']);
+Route::post('/reset-password', [UmkmAuthController::class, 'resetPassword']);
 
 Route::get('/categories', [CategoryController::class, 'index']);   // Get all categories
 Route::get('/categories/{id}', [CategoryController::class, 'show']); // Get category by ID
 Route::get('/umkms', [UMKMController::class, 'index']);   // Get all UMKM
 Route::get('/umkms/{id}', [UMKMController::class, 'show']); // Get UMKM by ID
+Route::post('/incomes', [IncomeController::class, 'store']);
+Route::put('/incomes/{income}', [IncomeController::class, 'update']);

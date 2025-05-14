@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\UMKMApproved;
+use App\Mail\UMKMRejected;
 use App\Models\UMKM;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class UMKMController extends Controller
@@ -29,7 +32,7 @@ class UMKMController extends Controller
         // ✅ Format ulang gambar agar bisa diakses jika disimpan di storage
         foreach ($umkm->products as $product) {
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
-                $product->image = asset('storage/' . $product->image);
+                $product->image = asset($product->image);
             }
         }
 
@@ -163,11 +166,15 @@ class UMKMController extends Controller
 
         $umkm->update(['status' => 'Active']);
 
+        // ✅ Kirim email konfirmasi
+        Mail::to($umkm->email)->send(new UMKMApproved($umkm));
+
         return response()->json([
             'message' => 'UMKM berhasil disetujui',
             'umkm' => $umkm
         ], 200);
     }
+
 
     // ✅ REJECT UMKM
     public function rejectUMKM($id)
@@ -183,11 +190,15 @@ class UMKMController extends Controller
 
         $umkm->update(['status' => 'Rejected']);
 
+        // ✅ Kirim email penolakan
+        Mail::to($umkm->email)->send(new UMKMRejected($umkm));
+
         return response()->json([
             'message' => 'UMKM berhasil ditolak',
             'umkm' => $umkm
         ], 200);
     }
+
 
 
     // ✅ DELETE UMKM

@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\UMKMRegistered;
 use App\Models\UMKM;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ResetPasswordMail;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class UmkmAuthController extends Controller
 {
@@ -19,13 +25,13 @@ class UmkmAuthController extends Controller
             'location_url' => 'nullable|string|url',
             'email' => 'required|string|email|unique:u_m_k_m_s,email',
             'password' => 'required|string|min:6|confirmed',
-            'document' => 'nullable|file|mimes:jpeg,png,pdf|max:2048', // ✅ Validasi File
+            'document' => 'nullable|file|mimes:jpeg,png,pdf|max:2048',
         ]);
 
         // ✅ Simpan File jika ada
         $documentPath = null;
         if ($request->hasFile('document')) {
-            $documentPath = $request->file('document')->store('umkm_documents', 'public'); // 🔥 Simpan ke `storage/app/public/umkm_documents`
+            $documentPath = $request->file('document')->store('umkm_documents', 'public');
         }
 
         // ✅ Buat UMKM baru dengan status "Pending"
@@ -37,8 +43,11 @@ class UmkmAuthController extends Controller
             'location_url' => $validated['location_url'] ?? '',
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'document' => $documentPath, // 🆕 Simpan path file jika ada
+            'document' => $documentPath,
         ]);
+
+        // ✅ Kirim email ke user yang baru daftar
+        Mail::to($validated['email'])->send(new UMKMRegistered($umkm));
 
         return response()->json([
             'message' => 'Your account has been registered successfully and is pending approval by the admin.',
@@ -114,5 +123,72 @@ class UmkmAuthController extends Controller
             'created_at' => $umkm->created_at,
             'updated_at' => $umkm->updated_at,
         ]);
+    }
+
+    public function sendResetPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $umkm = UMKM::where('email', $request->email)->first();
+
+        if (!$umkm) {
+            return response()->json(['message' => 'Email tidak ditemukan'], 404);
+        }
+
+        $token = Str::random(64);
+
+        // Simpan token
+        DB::table('password_resets')->updateOrInsert(
+            ['email' => $request->email],
+            [
+                'token' => Hash::make($token),
+                'created_at' => now()
+            ]
+        );
+
+        // Kirim email reset
+        Mail::to($request->email)->send(new ResetPasswordMail($request->email, $token));
+
+        return response()->json(['message' => 'Link reset password telah dikirim ke email Anda']);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required',
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $record = DB::table('password_resets')->where('email', $request->email)->first();
+
+        if (!$record) {
+            return response()->json(['message' => 'Token tidak ditemukan'], 404);
+        }
+
+        if (!Hash::check($request->token, $record->token)) {
+            return response()->json(['message' => 'Token tidak valid'], 400);
+        }
+
+        if (now()->diffInMinutes($record->created_at) > 60) {
+            return response()->json(['message' => 'Token kadaluarsa'], 400);
+        }
+
+        $umkm = UMKM::where('email', $request->email)->first();
+        if (!$umkm) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+
+        $umkm->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        DB::table('password_resets')->where('email', $request->email)->delete();
+
+        return response()->json(['message' => 'Password berhasil diubah']);
     }
 }

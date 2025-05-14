@@ -29,18 +29,27 @@ class IncomeController extends Controller
     public function store(IncomeRequest $request)
     {
         $umkm = auth()->guard('umkm')->user();
+        $admin = auth()->guard('admin')->user();
 
-        if (!$umkm) {
+        if (!$umkm && !$admin) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
         $validatedData = $request->validated();
-        $validatedData['date'] = $validatedData['date'] . '-01'; // 🔥 Tambahkan "-01" untuk memastikan format "YYYY-MM-DD"
+        $validatedData['date'] = $validatedData['date'] . '-01';
 
-        $income = Income::create($validatedData + ['umkm_id' => $umkm->id]);
+        // Ambil umkm_id
+        $umkmId = $umkm ? $umkm->id : $request->input('umkm_id');
+
+        if (!$umkmId) {
+            return response()->json(['message' => 'UMKM ID is required'], 422);
+        }
+
+        $income = Income::create($validatedData + ['umkm_id' => $umkmId]);
 
         return response()->json(['message' => 'Income added successfully', 'income' => $income], 201);
     }
+
 
 
     public function show($id, Request $request)
